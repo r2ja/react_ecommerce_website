@@ -1,42 +1,51 @@
-import React from "react";
-
-import { Formik, Form, Field } from "formik";
-
-import * as Yup from "yup";
-
-import { TextField, Button, Grid, Typography } from "@mui/material";
+import React, { useState, useEffect } from 'react';
+import { Formik, Form, Field } from 'formik';
+import * as Yup from 'yup';
+import { TextField, Button, Grid, Typography } from '@mui/material';
+import DOMPurify from 'dompurify';
+import { submitContactForm } from '../../../services/apiService';
 
 const validationSchema = Yup.object().shape({
-  name: Yup.string().required("Name is required"),
-
-  email: Yup.string().email("Invalid email").required("Email is required"),
-
-  subject: Yup.string().required("Subject is required"),
-
-  message: Yup.string().required("Message is required"),
+  name: Yup.string().required('Name is required'),
+  email: Yup.string().email('Invalid email').required('Email is required'),
+  subject: Yup.string().required('Subject is required'),
+  message: Yup.string().required('Message is required'),
 });
 
 const ContactForm = () => {
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('token');
+    if (savedToken) {
+      setToken(savedToken);
+    }
+  }, []);
+
   const initialValues = {
-    name: "",
-
-    email: "",
-
-    subject: "",
-
-    message: "",
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
   };
 
-  const handleSubmit = (values, { setSubmitting, resetForm }) => {
-    console.log(values);
+  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+    const sanitizedValues = {
+      name: DOMPurify.sanitize(values.name),
+      email: DOMPurify.sanitize(values.email),
+      subject: DOMPurify.sanitize(values.subject),
+      message: DOMPurify.sanitize(values.message),
+    };
 
-    setTimeout(() => {
-      alert(JSON.stringify(values, null, 2));
-
+    try {
+      const response = await submitContactForm(sanitizedValues);
+      alert(JSON.stringify(response.data, null, 2));
       setSubmitting(false);
-
       resetForm();
-    }, 400);
+    } catch (error) {
+      console.error('Error:', error);
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -45,7 +54,6 @@ const ContactForm = () => {
         <Typography variant="h4" gutterBottom>
           Got Questions?
         </Typography>
-
         <Typography paragraph>
           Nam nec tellus a odio tincidunt auctor a ornare odio. Sed non mauris
           vitae erat consequat auctor eu in elit. Class aptent taciti sociosqu
@@ -66,7 +74,7 @@ const ContactForm = () => {
                 margin="normal"
                 name="name"
                 label="Your Name"
-                error={touched.name && errors.name}
+                error={touched.name && !!errors.name}
                 helperText={touched.name && errors.name}
               />
               <Field
@@ -75,7 +83,7 @@ const ContactForm = () => {
                 margin="normal"
                 name="email"
                 label="Your Email"
-                error={touched.email && errors.email}
+                error={touched.email && !!errors.email}
                 helperText={touched.email && errors.email}
               />
               <Field
@@ -84,7 +92,7 @@ const ContactForm = () => {
                 margin="normal"
                 name="subject"
                 label="Subject"
-                error={touched.subject && errors.subject}
+                error={touched.subject && !!errors.subject}
                 helperText={touched.subject && errors.subject}
               />
               <Field
@@ -95,7 +103,7 @@ const ContactForm = () => {
                 label="Your Message"
                 multiline
                 rows={4}
-                error={touched.message && errors.message}
+                error={touched.message && !!errors.message}
                 helperText={touched.message && errors.message}
               />
               <Button
@@ -103,7 +111,7 @@ const ContactForm = () => {
                 color="primary"
                 type="submit"
                 disabled={isSubmitting}
-                style={{ marginTop: "1rem" }}
+                style={{ marginTop: '1rem' }}
               >
                 SEND
               </Button>
