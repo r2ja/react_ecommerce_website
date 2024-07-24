@@ -1,58 +1,134 @@
-import React, { useState } from 'react';
-import { TextField, Button, Typography, Grid } from '@mui/material';
-import { login } from '../../services/apiService';
+import React from "react";
+import { Formik, Form, Field } from "formik";
+import * as Yup from "yup";
+import { useGoogleLogin } from "@react-oauth/google";
+import { useNavigate } from "react-router-dom";
+import axios from 'axios';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Container,
+  CssBaseline,
+  ThemeProvider,
+  createTheme,
+} from "@mui/material";
+import { useAuth } from '../../contexts/authContext';
 
-const Login = ({ setToken }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+const darkTheme = createTheme({
+  palette: {
+    mode: "dark",
+    background: {
+      default: "#121212",
+    },
+  },
+});
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await login({ username, password });
-      setToken(response.data.token);
-      localStorage.setItem('token', response.data.token);
-    } catch (error) {
-      alert('Login failed');
-    }
+const validationSchema = Yup.object().shape({
+  username: Yup.string().required("Username is required"),
+  password: Yup.string()
+    .min(8, "Password must be at least 8 characters")
+    .required("Password is required"),
+});
+
+const LoginForm = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleSubmit = (values, { setSubmitting }) => {
+    console.log(values);
+    setSubmitting(false);
   };
 
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      const userInfo = await axios.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
+      );
+
+      const user = {
+        name: userInfo.data.name,
+        profilePicture: userInfo.data.picture,
+        email: userInfo.data.email,
+      };
+
+      login(user);
+      navigate('/login/success');
+    },
+    onError: errorResponse => console.log(errorResponse),
+  });
+
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <Typography variant="h4" gutterBottom>
-          Login
-        </Typography>
-      </Grid>
-      <Grid item xs={12}>
-        <form onSubmit={handleLogin}>
-          <TextField
-            fullWidth
-            margin="normal"
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            margin="normal"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            type="submit"
-            style={{ marginTop: '1rem' }}
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <Container component="main" maxWidth="xs">
+        <Box
+          sx={{
+            marginTop: 8,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            bgcolor: "background.paper",
+            p: 4,
+            borderRadius: 2,
+          }}
+        >
+          <Typography component="h1" variant="h5">
+            Sign in
+          </Typography>
+          <Formik
+            initialValues={{ username: "", password: "" }}
+            validationSchema={validationSchema}
+            onSubmit={handleSubmit}
           >
-            LOGIN
+            {({ errors, touched, isSubmitting }) => (
+              <Form style={{ width: "100%" }}>
+                <Field
+                  as={TextField}
+                  margin="normal"
+                  fullWidth
+                  id="username"
+                  label="Username"
+                  name="username"
+                  autoComplete="username"
+                  autoFocus
+                  error={touched.username && errors.username}
+                  helperText={touched.username && errors.username}
+                />
+                <Field
+                  as={TextField}
+                  margin="normal"
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type="password"
+                  id="password"
+                  autoComplete="current-password"
+                  error={touched.password && errors.password}
+                  helperText={touched.password && errors.password}
+                />
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  sx={{ mt: 3, mb: 2 }}
+                  disabled={isSubmitting}
+                >
+                  Sign In
+                </Button>
+              </Form>
+            )}
+          </Formik>
+
+          <Button onClick={() => googleLogin()} fullWidth variant="outlined" sx={{ mt: 2 }}>
+            Sign in with Google
           </Button>
-        </form>
-      </Grid>
-    </Grid>
+        </Box>
+      </Container>
+    </ThemeProvider>
   );
 };
 
-export default Login;
+export default LoginForm;

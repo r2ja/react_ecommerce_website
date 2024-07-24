@@ -1,13 +1,12 @@
-// src/redux/store.js or src/redux/store.jsx
 import { configureStore } from '@reduxjs/toolkit';
 import productReducer from './reducers/productReducer';
+import cartReducer from './reducers/cartReducer';
 
 const store = configureStore({
   reducer: {
     products: productReducer,
-    // Add other reducers here if you have any
+    cart: cartReducer,
   },
-  // Redux Toolkit includes thunk middleware by default, so we don't need to add it explicitly
 });
 
 export default store;
